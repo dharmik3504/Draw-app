@@ -1,5 +1,5 @@
 import express from "express";
-import { prisma } from "@repo/db/primsaClient";
+import { prisma } from "@repo/db/client";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { auth } from "./auth";
@@ -27,12 +27,13 @@ app.post("/signup", async (req, res) => {
     });
     return;
   }
-  const { username, password, name } = req.body;
+  const { name, password, email, photo } = req.body;
   const result = await prisma.user.create({
     data: {
-      username,
+      email,
       password,
       name,
+      photo,
     },
   });
   res.json({
