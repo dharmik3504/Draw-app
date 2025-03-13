@@ -1,4 +1,4 @@
-import express from "express";
+import express, { ErrorRequestHandler } from "express";
 import { prisma } from "@repo/db/client";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
@@ -20,40 +20,60 @@ app.get("/", async (req, res) => {
   });
 });
 app.post("/signup", async (req, res) => {
-  const data = CreateUserSchema.safeParse(req.body);
-  if (!data.success) {
+  const parseddata = CreateUserSchema.safeParse(req.body);
+  if (!parseddata.success) {
     res.json({
-      message: data,
+      message: parseddata,
     });
     return;
   }
-  const { name, password, email, photo } = req.body;
-  const result = await prisma.user.create({
-    data: {
-      email,
-      password,
-      name,
-      photo,
-    },
-  });
-  res.json({
-    userId: "123",
-  });
+
+  try {
+    const { name, password, username } = parseddata.data;
+
+    const result = await prisma.user.create({
+      data: {
+        email: username,
+        // TODO:harh the pw
+        password,
+        name,
+      },
+    });
+    res.json({
+      userId: result.id,
+    });
+  } catch (e) {
+    res.status(401).json({
+      message: "user already exist with this username",
+    });
+  }
 });
 
-app.post("/signin", (req, res) => {
-  const data = SigninSchema.safeParse(req.body);
-  if (!data.success) {
+app.post("/signin", async (req, res) => {
+  const parseddata = SigninSchema.safeParse(req.body);
+  if (!parseddata.success) {
     res.json({
       message: "incorrect inputs",
     });
     return;
   }
-
-  const userId = 1;
+  // comapre the hashes password here
+  const { username, password } = parseddata.data;
+  const user = await prisma.user.findFirst({
+    where: {
+      email: username,
+      password,
+    },
+  });
+  if (!user) {
+    res.status(401).json({
+      message: "user does not exist",
+    });
+    return;
+  }
   const token = jwt.sign(
     {
-      userId,
+      userId: user?.id,
     },
     JWT_SECRET
   );
@@ -62,17 +82,30 @@ app.post("/signin", (req, res) => {
   });
 });
 
-app.post("/room", auth, (req, res) => {
-  //db
-  const data = CreateRommSchema.safeParse(req.body);
-  if (!data.success) {
+app.post("/room", auth, async (req, res) => {
+  const parseddata = CreateRommSchema.safeParse(req.body);
+  if (!parseddata.success) {
     res.json({
       message: "incorrect inputs",
     });
     return;
   }
-  res.json({
-    roomId: 123,
-  });
+  // @ts-ignore added a gobal types updated the reqst obj in express
+  const userId = req.userId;
+
+  const { name } = parseddata.data;
+  try {
+    const response = await prisma.room.create({
+      data: {
+        adminId: userId,
+        slug: name,
+      },
+    });
+    res.json({
+      roomId: response.id,
+    });
+  } catch (e) {
+    res.status(411).json({ message: "room already exists with this name" });
+  }
 });
 app.listen(3001);
