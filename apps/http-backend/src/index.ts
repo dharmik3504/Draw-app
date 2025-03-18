@@ -17,6 +17,7 @@ app.get("/", async (req, res) => {
 
   res.json({
     data,
+    message:"testing"
   });
 });
 app.post("/signup", async (req, res) => {
