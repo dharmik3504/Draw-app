@@ -3,21 +3,22 @@ import { prisma } from "@repo/db/client";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { auth } from "./auth";
+import cors from "cors";
 import {
   CreateUserSchema,
   SigninSchema,
   CreateRommSchema,
 } from "@repo/common/types";
 const app = express();
-
 app.use(express.json());
+app.use(cors());
 
 app.get("/", async (req, res) => {
   const data = await prisma.user.findMany({});
 
   res.json({
     data,
-    message:"testing"
+    message: "testing",
   });
 });
 app.post("/signup", async (req, res) => {
